@@ -1,38 +1,104 @@
 #include <LiquidCrystal.h>
 
-// initialize the library by associating any needed LCD interface pin
-// with the arduino pin number it is connected to
-const int rs = 8, en = 9, d4 = 4, d5 = 5, d6 = 6, d7 = 7;
-const int jumpb = 10;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+#define RS 8
+#define EN 9
+#define D4 4
+#define D5 5
+#define D6 6
+#define D7 7
 
-// make some custom characters:
-byte rect_first[] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B01110,
-    B01110,
-    B01110,
-};
+#define JUMP_BUTTON 10
 
-byte rect_second[] = {
-    B00000,
-    B01110,
-    B01110,
-    B01110,
-    B00000,
-    B00000,
-    B00000,
-    B00000
-};
-
+/* jump states */
 #define FALLING     0
 #define RISING      1
 #define NOT_JUMPING 2
 
+struct Rect {
+    int jump_state;
+    int x, y, sprite;
+};
+
+#define LEN_RECT 2
+byte rect_sprites[LEN_RECT][8] = {
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B01110,
+        B01110,
+        B01110,
+    },
+    {
+        B00000,
+        B01110,
+        B01110,
+        B01110,
+        B00000,
+        B00000,
+        B00000,
+        B00000
+    },
+};
+
+/*
+** Each enemy is moving right to left so, to make the
+** animation more smoothly we are drawing first the
+** full cell, and after we draw the pixels between two
+** cells:
+**
+**    |....||    | <--- |  ..||..  | <--- |    ||....|
+**    |....||    | <--- |  ..||..  | <--- |    ||....|
+*/
+
+#define ENEMY_CENTER     0
+#define ENEMY_IN_BETWEEN 1
+
+struct Enemy {
+    int x;
+    int pos;
+};
+
+#define LEN_ENEMY 3
+byte enemy_sprites[LEN_ENEMY][8] = {
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B11111,
+        B11111,
+        B11111,
+        B11111
+    },
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B11000,
+        B11000,
+        B11000,
+        B11000
+    },
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B00011,
+        B00011,
+        B00011,
+        B00011
+    }
+};
+
+LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
+
+Rect rect;
+Enemy enemy;
 
 void draw(int sprite_num, int x, int y)
 {
@@ -40,14 +106,12 @@ void draw(int sprite_num, int x, int y)
     lcd.write(sprite_num);
 }
 
-struct Rect {
-    int jump_state;
-    int x, y, sprite;
-};
-
-Rect rect;
-
 void draw_rect()
+{
+    draw(rect.sprite, rect.x, rect.y);
+}
+
+void update_rect()
 {
     switch (rect.jump_state) {
         case RISING: {
@@ -85,20 +149,49 @@ void draw_rect()
             /* do nothing for now */
         } break;
     }
+}
 
-    draw(rect.sprite, rect.x, rect.y);
+void draw_enemy()
+{
+    if (enemy.pos == ENEMY_CENTER) {
+        draw(3, enemy.x, 1);
+        return;
+    }
+
+    draw(4, enemy.x, 1);
+    if (enemy.x-1 >= 0) {
+        draw(5, enemy.x-1, 1);
+    } else {
+        draw(5, 15, 1);
+    }
+}
+
+void update_enemy()
+{
+    enemy.x -= 1;
+    if (enemy.x < 0) {
+        enemy.x = 15;
+    }
+
+    enemy.pos = (enemy.pos == ENEMY_CENTER) ? ENEMY_IN_BETWEEN : ENEMY_CENTER;
 }
 
 void setup()
 {
-    // initialize LCD and set up the number of columns and rows:
     lcd.begin(16, 2);
-    lcd.createChar(1, rect_first);
-    lcd.createChar(2, rect_second);
-    Serial.begin(9600);
 
-    pinMode(jumpb, INPUT);
+    /* load all sprites */
+    lcd.createChar(1, rect_sprites[0]);
+    lcd.createChar(2, rect_sprites[1]);
 
+    lcd.createChar(3, enemy_sprites[0]);
+    lcd.createChar(4, enemy_sprites[1]);
+    lcd.createChar(5, enemy_sprites[2]);
+
+    /* set pins */
+    pinMode(JUMP_BUTTON, INPUT);
+
+    /* initiate all objects */
     rect = {
         .jump_state = NOT_JUMPING,
         .x = 1,
@@ -106,26 +199,30 @@ void setup()
         .sprite = 1
     };
 
-    // set the cursor to the top left
-    lcd.setCursor(0, 0);
-}
+    enemy = {
+        .x = 15,
+        .pos = ENEMY_CENTER
+    };
 
-int i = 1;
+
+    Serial.begin(9600); // debug
+}
 
 void loop()
 {
     lcd.clear();
-    int jump = digitalRead(jumpb);
-    Serial.print("jump=");
-    Serial.println(jumpb);
+    int jump = digitalRead(JUMP_BUTTON);
     if (rect.jump_state == NOT_JUMPING) {
-        if (jump == HIGH) {
+        if (jump) {
             rect.jump_state = RISING;
         }
     }
 
     draw_rect();
+    draw_enemy();
+
+    update_rect();
+    update_enemy();
 
     delay(100);
-    Serial.println(rect.jump_state);
 }
