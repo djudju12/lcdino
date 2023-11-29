@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'build/lcdino.ino.hex'
+elf = 'build/lcdino.ino.elf'
