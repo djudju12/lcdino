@@ -66,7 +66,9 @@ LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 Rect rect;
 Enemy enemy;
 
-void draw(int sprite_num, int x, int y)
+int jump, loose = 0, points = 0;
+
+void draw_sprite(int sprite_num, int x, int y)
 {
     lcd.setCursor(x, y);
     lcd.write(sprite_num);
@@ -74,7 +76,7 @@ void draw(int sprite_num, int x, int y)
 
 void draw_rect()
 {
-    draw(rect.sprite, rect.x, rect.y);
+    draw_sprite(rect.sprite, rect.x, rect.y);
 }
 
 void update_rect()
@@ -119,7 +121,7 @@ void update_rect()
 
 void draw_enemy()
 {
-    draw(3, enemy.x, 1);
+    draw_sprite(3, enemy.x, 1);
 }
 
 void update_enemy()
@@ -127,6 +129,31 @@ void update_enemy()
     enemy.x -= 1;
     if (enemy.x < 0) {
         enemy.x = 15;
+    }
+}
+
+void draw_points()
+{
+    int col;
+    if (points < 10) {
+        col = 15;
+    } else if (points < 100) {
+        col = 14;
+    } else {
+        col = 13;
+    }
+
+    lcd.setCursor(col, 0);
+    lcd.print(points);
+}
+
+void update_points() {
+    if (enemy.x == rect.x ) {
+        if (rect.y == 1 && rect.sprite == 1) {
+            loose = 1;
+        } else {
+            points++;
+        }
     }
 }
 
@@ -159,10 +186,27 @@ void setup()
     Serial.begin(9600); // debug
 }
 
+
 void loop()
 {
     lcd.clear();
-    int jump = digitalRead(JUMP_BUTTON);
+
+    if (loose) {
+        lcd.setCursor(0, 0);
+        lcd.print("Game Over!");
+
+        draw_points();
+
+        while (!digitalRead(JUMP_BUTTON)) {
+            delay(100);
+        }
+
+        loose = 0;
+        points = 0;
+        return;
+    }
+
+    jump = digitalRead(JUMP_BUTTON);
     if (rect.jump_state == NOT_JUMPING) {
         if (jump) {
             rect.jump_state = RISING;
@@ -171,7 +215,9 @@ void loop()
 
     draw_rect();
     draw_enemy();
+    draw_points();
 
+    update_points();
     update_rect();
     update_enemy();
 
