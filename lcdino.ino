@@ -43,25 +43,11 @@ byte rect_sprites[LEN_RECT][8] = {
     },
 };
 
-/*
-** Each enemy is moving right to left so, to make the
-** animation more smoothly we are drawing first the
-** full cell, and after we draw the pixels between two
-** cells:
-**
-**    |....||    | <--- |  ..||..  | <--- |    ||....|
-**    |....||    | <--- |  ..||..  | <--- |    ||....|
-*/
-
-#define ENEMY_CENTER     0
-#define ENEMY_IN_BETWEEN 1
-
 struct Enemy {
     int x;
-    int pos;
 };
 
-#define LEN_ENEMY 3
+#define LEN_ENEMY 1
 byte enemy_sprites[LEN_ENEMY][8] = {
     {
         B00000,
@@ -73,26 +59,6 @@ byte enemy_sprites[LEN_ENEMY][8] = {
         B11111,
         B11111
     },
-    {
-        B00000,
-        B00000,
-        B00000,
-        B00000,
-        B11000,
-        B11000,
-        B11000,
-        B11000
-    },
-    {
-        B00000,
-        B00000,
-        B00000,
-        B00000,
-        B00011,
-        B00011,
-        B00011,
-        B00011
-    }
 };
 
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
@@ -153,17 +119,7 @@ void update_rect()
 
 void draw_enemy()
 {
-    if (enemy.pos == ENEMY_CENTER) {
-        draw(3, enemy.x, 1);
-        return;
-    }
-
-    draw(4, enemy.x, 1);
-    if (enemy.x-1 >= 0) {
-        draw(5, enemy.x-1, 1);
-    } else {
-        draw(5, 15, 1);
-    }
+    draw(3, enemy.x, 1);
 }
 
 void update_enemy()
@@ -172,8 +128,6 @@ void update_enemy()
     if (enemy.x < 0) {
         enemy.x = 15;
     }
-
-    enemy.pos = (enemy.pos == ENEMY_CENTER) ? ENEMY_IN_BETWEEN : ENEMY_CENTER;
 }
 
 void setup()
@@ -185,8 +139,6 @@ void setup()
     lcd.createChar(2, rect_sprites[1]);
 
     lcd.createChar(3, enemy_sprites[0]);
-    lcd.createChar(4, enemy_sprites[1]);
-    lcd.createChar(5, enemy_sprites[2]);
 
     /* set pins */
     pinMode(JUMP_BUTTON, INPUT);
@@ -201,7 +153,6 @@ void setup()
 
     enemy = {
         .x = 15,
-        .pos = ENEMY_CENTER
     };
 
 
