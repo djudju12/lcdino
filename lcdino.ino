@@ -9,18 +9,27 @@
 
 #define JUMP_BUTTON 10
 
+#define ROW_TOP  0
+#define ROW_DOWN 1
+
+#define DELAY_MS 50
+
+#define PLAYER_SPRITE_DOWN 1
+#define PLAYER_SPRITE_UP   2
+#define ENEMY_SPRITE       3
+
 /* jump states */
 #define FALLING     0
 #define RISING      1
 #define NOT_JUMPING 2
 
-struct Rect {
+struct Player {
     int jump_state;
-    int x, y, sprite;
+    int col, row, sprite;
 };
 
-#define LEN_RECT 2
-byte rect_sprites[LEN_RECT][8] = {
+#define LEN_PLAYER 2
+byte player_sprites[LEN_PLAYER][8] = {
     {
         B00000,
         B00000,
@@ -43,93 +52,36 @@ byte rect_sprites[LEN_RECT][8] = {
     },
 };
 
-struct Enemy {
-    int x;
-};
-
-#define LEN_ENEMY 1
-byte enemy_sprites[LEN_ENEMY][8] = {
-    {
-        B00000,
-        B00000,
-        B00000,
-        B00000,
-        B11111,
-        B11111,
-        B11111,
-        B11111
-    },
+byte enemy_sprite[8] = {
+    B00000,
+    B00000,
+    B00000,
+    B00000,
+    B11111,
+    B11111,
+    B11111,
+    B11111
 };
 
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
-Rect rect;
-Enemy enemy;
+Player player;
+int enemy_pos, jump, loose = 0, points = 0;
 
-int jump, loose = 0, points = 0;
-
-void draw_sprite(int sprite_num, int x, int y)
+void draw_sprite(int sprite_num, int col, int row)
 {
-    lcd.setCursor(x, y);
+    lcd.setCursor(col, row);
     lcd.write(sprite_num);
 }
 
-void draw_rect()
+void draw_player()
 {
-    draw_sprite(rect.sprite, rect.x, rect.y);
-}
-
-void update_rect()
-{
-    switch (rect.jump_state) {
-        case RISING: {
-
-            if (rect.sprite == 1) {
-                rect.sprite = 2;
-            } else if (rect.sprite == 2) {
-                if (rect.y == 1) {
-                    rect.y = 0;
-                } else {
-                    rect.jump_state = FALLING;
-                }
-
-                rect.sprite = 1;
-            }
-
-        } break;
-
-        case FALLING: {
-
-            if (rect.sprite == 1) {
-                if (rect.y == 1) {
-                    rect.jump_state = NOT_JUMPING;
-                } else {
-                    rect.sprite = 2;
-                    rect.y = 1;
-                }
-            } else {
-                rect.sprite = 1;
-            }
-
-        } break;
-
-        case NOT_JUMPING: {
-            /* do nothing for now */
-        } break;
-    }
+    draw_sprite(player.sprite, player.col, player.row);
 }
 
 void draw_enemy()
 {
-    draw_sprite(3, enemy.x, 1);
-}
-
-void update_enemy()
-{
-    enemy.x -= 1;
-    if (enemy.x < 0) {
-        enemy.x = 15;
-    }
+    draw_sprite(ENEMY_SPRITE, enemy_pos, 1);
 }
 
 void draw_points()
@@ -147,45 +99,103 @@ void draw_points()
     lcd.print(points);
 }
 
-void update_points() {
-    if (enemy.x == rect.x ) {
-        if (rect.y == 1 && rect.sprite == 1) {
-            loose = 1;
-        } else {
-            points++;
+void update_player()
+{
+    switch (player.jump_state) {
+
+        case RISING: {
+            if (player.sprite == PLAYER_SPRITE_DOWN) {
+                player.sprite = PLAYER_SPRITE_UP;
+            } else { /* sprite up */
+                if (player.row == ROW_TOP) {
+                    player.jump_state = FALLING;
+                } else {
+                    player.row = ROW_TOP;
+                }
+
+                player.sprite = PLAYER_SPRITE_DOWN;
+            }
+        } break;
+
+        case FALLING: {
+            if (player.sprite == PLAYER_SPRITE_DOWN) {
+                if (player.row == ROW_DOWN) {
+                    player.jump_state = NOT_JUMPING;
+                } else { /* row top */
+                    player.row = ROW_DOWN;
+                    player.sprite = PLAYER_SPRITE_UP;
+                }
+            } else {
+                player.sprite = PLAYER_SPRITE_DOWN;
+            }
+        } break;
+
+        case NOT_JUMPING: {
+            /* do nothing for now */
+        } break;
+    }
+}
+
+int enemy_is_updatable = 1;
+void update_enemy()
+{
+    if (enemy_is_updatable) {
+        enemy_pos -= 1;
+        if (enemy_pos < 0) {
+            enemy_pos = 15;
         }
     }
+
+    enemy_is_updatable = !enemy_is_updatable;
+}
+
+int ms_count = 0;
+void update_points()
+{
+    if (enemy_pos == player.col &&
+        player.row == ROW_DOWN  &&
+        player.sprite == PLAYER_SPRITE_DOWN)
+    {
+        loose = 1;
+        ms_count = 0;
+        return;
+    }
+
+    ms_count += DELAY_MS;
+    if (ms_count == 1000) {
+        points++;
+        ms_count = 0;
+    }
+}
+
+void init_game()
+{
+    player = {
+        .jump_state = NOT_JUMPING,
+        .col = 1,
+        .row = 1,
+        .sprite = 1
+    };
+
+    enemy_pos = 15;
+    loose = 0;
+    points = 0;
+    enemy_is_updatable = 1;
 }
 
 void setup()
 {
     lcd.begin(16, 2);
 
-    /* load all sprites */
-    lcd.createChar(1, rect_sprites[0]);
-    lcd.createChar(2, rect_sprites[1]);
+    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);
+    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);
+    lcd.createChar(ENEMY_SPRITE, enemy_sprite);
 
-    lcd.createChar(3, enemy_sprites[0]);
-
-    /* set pins */
     pinMode(JUMP_BUTTON, INPUT);
 
-    /* initiate all objects */
-    rect = {
-        .jump_state = NOT_JUMPING,
-        .x = 1,
-        .y = 1,
-        .sprite = 1
-    };
-
-    enemy = {
-        .x = 15,
-    };
-
-
-    Serial.begin(9600); // debug
+    init_game();
+    // Serial.begin(9600); // debug
 }
-
 
 void loop()
 {
@@ -195,31 +205,33 @@ void loop()
         lcd.setCursor(0, 0);
         lcd.print("Game Over!");
 
+        lcd.setCursor(0, 1);
+        lcd.print("Press <jump>");
+
         draw_points();
 
         while (!digitalRead(JUMP_BUTTON)) {
             delay(100);
         }
 
-        loose = 0;
-        points = 0;
+        init_game();
         return;
     }
 
-    jump = digitalRead(JUMP_BUTTON);
-    if (rect.jump_state == NOT_JUMPING) {
+    if (player.jump_state == NOT_JUMPING) {
+        jump = digitalRead(JUMP_BUTTON);
         if (jump) {
-            rect.jump_state = RISING;
+            player.jump_state = RISING;
         }
     }
 
-    draw_rect();
     draw_enemy();
+    draw_player();
     draw_points();
 
     update_points();
-    update_rect();
     update_enemy();
+    update_player();
 
-    delay(100);
+    delay(DELAY_MS);
 }
