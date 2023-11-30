@@ -19,7 +19,8 @@ enum Jump_State { FALL, RISE, STOP };
 enum Entity_Type {
     PLAYER,
     BASIC_ENEMY,
-    JUMPING_ENEMY
+    JUMPING_ENEMY,
+    FLYING_ENEMY,
 };
 
 enum Sprite {
@@ -27,13 +28,15 @@ enum Sprite {
     PLAYER_SPRITE_UP,
     BASIC_ENEMY_SPRITE_DOWN,
     BASIC_ENEMY_SPRITE_UP,
+    FLYING_ENEMY_SPRITE_DOWN,
+    FLYING_ENEMY_SPRITE_UP
 
 };
 
 struct Entity {
-    enum Jump_State  jump_state;
+    enum Jump_State jump_state;
     enum Entity_Type type;
-    enum Sprite      sprite;
+    enum Sprite sprite;
     int col, row;
 };
 
@@ -61,27 +64,52 @@ byte player_sprites[LEN_PLAYER][8] = {
     },
 };
 
-byte enemy_sprite[8] = {
-    B00000,
-    B00000,
-    B00000,
-    B00000,
-    B11111,
-    B11111,
-    B11111,
-    B11111
+byte basic_enemy_sprites[2][8] = {
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B11111,
+        B11111,
+        B11111,
+        B11111
+    },
+    {
+        B11111,
+        B11111,
+        B11111,
+        B11111,
+        B00000,
+        B00000,
+        B00000,
+        B00000
+    }
 };
 
-byte enemy_sprite_up[8] = {
-    B11111,
-    B11111,
-    B11111,
-    B11111,
-    B00000,
-    B00000,
-    B00000,
-    B00000
+byte flying_enemy_sprites[2][8] = {
+    {
+        B00000,
+        B00000,
+        B00000,
+        B00000,
+        B11111,
+        B01100,
+        B00000,
+        B00000
+    },
+    {
+        B00000,
+        B00000,
+        B01100,
+        B11111,
+        B00000,
+        B00000,
+        B00000,
+        B00000
+    }
 };
+
 
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
@@ -173,7 +201,7 @@ int update_player()
 
 void random_enemy()
 {
-    int chaos = random(5);
+    int chaos = random(6);
 
     switch (chaos) {
         case 0: {
@@ -187,6 +215,20 @@ void random_enemy()
             enemy.jump_state = FALL;
             enemy.type = JUMPING_ENEMY;
             enemy.sprite = BASIC_ENEMY_SPRITE_UP;
+            enemy.row = ROW_TOP;
+        } break;
+
+        case 2: {
+            enemy.jump_state = RISE;
+            enemy.type = FLYING_ENEMY;
+            enemy.sprite = FLYING_ENEMY_SPRITE_DOWN;
+            enemy.row = ROW_DOWN;
+        } break;
+
+        case 3: {
+            enemy.jump_state = FALL;
+            enemy.type = FLYING_ENEMY;
+            enemy.sprite = FLYING_ENEMY_SPRITE_UP;
             enemy.row = ROW_TOP;
         } break;
 
@@ -217,6 +259,8 @@ int update_enemy()
     int result;
     if (enemy.type == JUMPING_ENEMY) {
        result = jump_entity(&enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
+    } else if (enemy.type == FLYING_ENEMY) {
+       result = jump_entity(&enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
     }
 
     enemy_is_updatable = !enemy_is_updatable;
@@ -228,7 +272,6 @@ void update_points()
 {
     if (enemy.col == player.col &&
         enemy.row == player.row)
-        // player.sprite == PLAYER_SPRITE_DOWN)
     {
         loose = 1;
         ms_count = 0;
@@ -269,13 +312,13 @@ void setup()
 {
     lcd.begin(16, 2);
 
-    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);  //  8
-    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);    // 16
-    lcd.createChar(BASIC_ENEMY_SPRITE_DOWN, enemy_sprite);  // 24
-    lcd.createChar(BASIC_ENEMY_SPRITE_UP, enemy_sprite_up); // 32
-                                                            // 48
-                                                            // 56
-                                                            // 64 - thats the limit!
+    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);            //  8
+    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);              // 16
+    lcd.createChar(BASIC_ENEMY_SPRITE_DOWN, basic_enemy_sprites[0]);  // 24
+    lcd.createChar(BASIC_ENEMY_SPRITE_UP, basic_enemy_sprites[1]);    // 32
+    lcd.createChar(FLYING_ENEMY_SPRITE_DOWN, flying_enemy_sprites[0]);// 48
+    lcd.createChar(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
+                                                                      // 64 - thats the limit!
 
 
     pinMode(JUMP_BUTTON, INPUT);
