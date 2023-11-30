@@ -216,68 +216,68 @@ int update_player()
     return jump_entity(&player, STOP, PLAYER_SPRITE_UP, PLAYER_SPRITE_DOWN);
 }
 
-void random_enemy()
+void randomize_enemy(Entity *enemy)
 {
     int chaos = random(6);
 
     switch (chaos) {
         case 0: {
-            enemy.jump_state = RISE;
-            enemy.type = JUMPING_ENEMY;
-            enemy.sprite = BASIC_ENEMY_SPRITE_DOWN;
-            enemy.row = ROW_DOWN;
+            enemy->jump_state = RISE;
+            enemy->type = JUMPING_ENEMY;
+            enemy->sprite = BASIC_ENEMY_SPRITE_DOWN;
+            enemy->row = ROW_DOWN;
         } break;
 
         case 1: {
-            enemy.jump_state = FALL;
-            enemy.type = JUMPING_ENEMY;
-            enemy.sprite = BASIC_ENEMY_SPRITE_UP;
-            enemy.row = ROW_TOP;
+            enemy->jump_state = FALL;
+            enemy->type = JUMPING_ENEMY;
+            enemy->sprite = BASIC_ENEMY_SPRITE_UP;
+            enemy->row = ROW_TOP;
         } break;
 
         case 2: {
-            enemy.jump_state = RISE;
-            enemy.type = FLYING_ENEMY;
-            enemy.sprite = FLYING_ENEMY_SPRITE_DOWN;
-            enemy.row = ROW_DOWN;
+            enemy->jump_state = RISE;
+            enemy->type = FLYING_ENEMY;
+            enemy->sprite = FLYING_ENEMY_SPRITE_DOWN;
+            enemy->row = ROW_DOWN;
         } break;
 
         case 3: {
-            enemy.jump_state = FALL;
-            enemy.type = FLYING_ENEMY;
-            enemy.sprite = FLYING_ENEMY_SPRITE_UP;
-            enemy.row = ROW_TOP;
+            enemy->jump_state = FALL;
+            enemy->type = FLYING_ENEMY;
+            enemy->sprite = FLYING_ENEMY_SPRITE_UP;
+            enemy->row = ROW_TOP;
         } break;
 
         default: {
-            enemy.jump_state = STOP;
-            enemy.type = BASIC_ENEMY;
-            enemy.sprite = BASIC_ENEMY_SPRITE_DOWN;
-            enemy.row = ROW_DOWN;
+            enemy->jump_state = STOP;
+            enemy->type = BASIC_ENEMY;
+            enemy->sprite = BASIC_ENEMY_SPRITE_DOWN;
+            enemy->row = ROW_DOWN;
         } break;
     }
-
-    enemy.col = 15;
 }
 
+// its more smoothly if we update enemys 1/2 times in comparison to player
 int enemy_is_updatable = 1;
-int update_enemy()
+int update_enemy(Entity *enemy)
 {
     if (!enemy_is_updatable) {
         enemy_is_updatable = !enemy_is_updatable;
         return 0;
     }
 
-    enemy.col -= 1;
-    if (enemy.col < 0) {
-        random_enemy();
+    enemy->col -= 1;
+    if (enemy->col < 0) {
+        enemy->col = 15;
+        randomize_enemy(enemy);
     }
 
     int result;
-    if (enemy.type == JUMPING_ENEMY) {
-       result = jump_entity(&enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
-    } else if (enemy.type == FLYING_ENEMY) {
-       result = jump_entity(&enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
+    if (enemy->type == JUMPING_ENEMY) {
+       result = jump_entity(enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
+    } else if (enemy->type == FLYING_ENEMY) {
+       result = jump_entity(enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
     }
 
     enemy_is_updatable = !enemy_is_updatable;
@@ -384,7 +384,7 @@ void loop()
 
     update_points();
 
-    if (update_enemy() != 0) {
+    if (update_enemy(&enemy) != 0) {
         return;
     }
 
