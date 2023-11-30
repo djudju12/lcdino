@@ -14,6 +14,10 @@
 
 #define DELAY_MS 50
 
+#define ENEMY_COUNT 2
+#define TRUE  7
+#define FALSE 0
+
 enum Jump_State { FALL, RISE, STOP };
 
 enum Entity_Type {
@@ -38,7 +42,7 @@ struct Entity {
     enum Jump_State jump_state;
     enum Entity_Type type;
     enum Sprite sprite;
-    int col, row;
+    int col, row, updatable;
 };
 
 #define LEN_PLAYER 2
@@ -125,8 +129,36 @@ byte logo_unisc_sprite[8] = {
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
 Entity player;
-Entity enemy;
-int jump, loose = 0, points = 0, running = 1;
+Entity enemys[ENEMY_COUNT];
+
+int jump, loose, points, running;
+
+void init_game()
+{
+    player = {
+        .jump_state = STOP,
+        .type = PLAYER,
+        .sprite = PLAYER_SPRITE_DOWN,
+        .col = 1,
+        .row = 1,
+        .updatable = TRUE
+    };
+
+    for (int i = 0; i < ENEMY_COUNT; i++) {
+        enemys[i] = {
+            .jump_state = STOP,
+            .type = BASIC_ENEMY,
+            .sprite = BASIC_ENEMY_SPRITE_DOWN,
+            .col = 15 + (i*8),
+            .row = 1,
+            .updatable = TRUE
+        };
+    }
+
+    loose = 0;
+    points = 0;
+    running = 1;
+}
 
 void lcderror(char *s)
 {
@@ -139,13 +171,22 @@ void lcderror(char *s)
 
 void draw_sprite(int sprite_num, int col, int row)
 {
-    lcd.setCursor(col, row);
-    lcd.write(sprite_num);
+    if (col <= 15) {
+        lcd.setCursor(col, row);
+        lcd.write(sprite_num);
+    }
 }
 
 void draw_entity(Entity *entity)
 {
     draw_sprite(entity->sprite, entity->col, entity->row);
+}
+
+void draw_enemys()
+{
+    for (int i = 0; i < ENEMY_COUNT; i++) {
+        draw_entity(&enemys[i]);
+    }
 }
 
 void draw_points()
@@ -258,12 +299,11 @@ void randomize_enemy(Entity *enemy)
     }
 }
 
-// its more smoothly if we update enemys 1/2 times in comparison to player
-int enemy_is_updatable = 1;
 int update_enemy(Entity *enemy)
 {
-    if (!enemy_is_updatable) {
-        enemy_is_updatable = !enemy_is_updatable;
+    // its more smoothly if we update enemys 1/2 times in comparison to player
+    if (!enemy->updatable) {
+        enemy->updatable = !enemy->updatable;
         return 0;
     }
 
@@ -280,19 +320,30 @@ int update_enemy(Entity *enemy)
        result = jump_entity(enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
     }
 
-    enemy_is_updatable = !enemy_is_updatable;
+    enemy->updatable = !enemy->updatable;
     return result;
+}
+
+int update_enemys()
+{
+    for (int i = 0; i < ENEMY_COUNT; i++) {
+        if (update_enemy(&enemys[i]) != 0) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 int ms_count = 0;
 void update_points()
 {
-    if (enemy.col == player.col &&
-        enemy.row == player.row)
-    {
-        loose = 1;
-        ms_count = 0;
-        return;
+    for (int i = 0; i < ENEMY_COUNT; i++) {
+        if (enemys[i].col == player.col && enemys[i].row == player.row) {
+            loose = 1;
+            ms_count = 0;
+            return;
+        }
     }
 
     ms_count += DELAY_MS;
@@ -300,29 +351,6 @@ void update_points()
         points++;
         ms_count = 0;
     }
-}
-
-void init_game()
-{
-    player = {
-        .jump_state = STOP,
-        .type = PLAYER,
-        .sprite = PLAYER_SPRITE_DOWN,
-        .col = 1,
-        .row = 1,
-    };
-
-    enemy = {
-        .jump_state = STOP,
-        .type = BASIC_ENEMY,
-        .sprite = BASIC_ENEMY_SPRITE_DOWN,
-        .col = 15,
-        .row = 1
-    };
-
-    loose = 0;
-    points = 0;
-    enemy_is_updatable = 1;
 }
 
 void setup()
@@ -378,16 +406,14 @@ void loop()
         }
     }
 
-    draw_entity(&enemy);
+    draw_enemys();
     draw_entity(&player);
     draw_points();
 
     update_points();
-
-    if (update_enemy(&enemy) != 0) {
+    if (update_enemys() != 0) {
         return;
     }
-
     if (update_player() != 0) {
         return;
     }
