@@ -29,7 +29,8 @@ enum Sprite {
     BASIC_ENEMY_SPRITE_DOWN,
     BASIC_ENEMY_SPRITE_UP,
     FLYING_ENEMY_SPRITE_DOWN,
-    FLYING_ENEMY_SPRITE_UP
+    FLYING_ENEMY_SPRITE_UP,
+    LOGO_UNISC_SPRITE
 
 };
 
@@ -47,16 +48,16 @@ byte player_sprites[LEN_PLAYER][8] = {
         B00000,
         B00000,
         B00000,
-        B00000,
-        B01110,
-        B01110,
-        B01110,
+        B00110,
+        B10101,
+        B01111,
+        B00101
     },
     {
-        B00000,
-        B01110,
-        B01110,
-        B01110,
+        B00110,
+        B10101,
+        B01111,
+        B00101,
         B00000,
         B00000,
         B00000,
@@ -70,17 +71,17 @@ byte basic_enemy_sprites[2][8] = {
         B00000,
         B00000,
         B00000,
-        B11111,
-        B11111,
-        B11111,
+        B00100,
+        B01110,
+        B01110,
         B11111
     },
     {
-        B11111,
-        B11111,
-        B11111,
-        B11111,
         B00000,
+        B00000,
+        B01110,
+        B11111,
+        B01110,
         B00000,
         B00000,
         B00000
@@ -110,6 +111,16 @@ byte flying_enemy_sprites[2][8] = {
     }
 };
 
+byte logo_unisc_sprite[8] = {
+    B11111,
+    B11111,
+    B11111,
+    B10011,
+    B10001,
+    B10001,
+    B11111,
+    B11111
+};
 
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
@@ -150,6 +161,12 @@ void draw_points()
 
     lcd.setCursor(col, 0);
     lcd.print(points);
+}
+
+void draw_unisc()
+{
+    lcd.setCursor(15, 1);
+    lcd.write(LOGO_UNISC_SPRITE);
 }
 
 int jump_entity(Entity *entity, Jump_State on_stop, Sprite up, Sprite down)
@@ -318,7 +335,7 @@ void setup()
     lcd.createChar(BASIC_ENEMY_SPRITE_UP, basic_enemy_sprites[1]);    // 32
     lcd.createChar(FLYING_ENEMY_SPRITE_DOWN, flying_enemy_sprites[0]);// 48
     lcd.createChar(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
-                                                                      // 64 - thats the limit!
+    lcd.createChar(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
 
     pinMode(JUMP_BUTTON, INPUT);
@@ -344,6 +361,7 @@ void loop()
         lcd.print("Press <jump>");
 
         draw_points();
+        draw_unisc();
 
         while (!digitalRead(JUMP_BUTTON)) {
             delay(100);
