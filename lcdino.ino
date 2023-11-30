@@ -14,18 +14,27 @@
 
 #define DELAY_MS 50
 
-#define PLAYER_SPRITE_DOWN 1
-#define PLAYER_SPRITE_UP   2
-#define ENEMY_SPRITE       3
+enum Jump_State { FALL, RISE, STOP };
 
-/* jump states */
-#define FALLING     0
-#define RISING      1
-#define NOT_JUMPING 2
+enum Entity_Type {
+    PLAYER,
+    BASIC_ENEMY,
+    JUMPING_ENEMY
+};
 
-struct Player {
-    int jump_state;
-    int col, row, sprite;
+enum Sprite {
+    PLAYER_SPRITE_DOWN = 1,
+    PLAYER_SPRITE_UP,
+    BASIC_ENEMY_SPRITE_DOWN,
+    BASIC_ENEMY_SPRITE_UP,
+
+};
+
+struct Entity {
+    enum Jump_State  jump_state;
+    enum Entity_Type type;
+    enum Sprite      sprite;
+    int col, row;
 };
 
 #define LEN_PLAYER 2
@@ -63,10 +72,31 @@ byte enemy_sprite[8] = {
     B11111
 };
 
+byte enemy_sprite_up[8] = {
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B00000,
+    B00000,
+    B00000,
+    B00000
+};
+
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
-Player player;
-int enemy_pos, jump, loose = 0, points = 0;
+Entity player;
+Entity enemy;
+int jump, loose = 0, points = 0, running = 1;
+
+void lcderror(char *s)
+{
+    lcd.clear();
+    lcd.print("err:");
+    lcd.setCursor(0, ROW_DOWN);
+    lcd.print(s);
+    running = 0;
+}
 
 void draw_sprite(int sprite_num, int col, int row)
 {
@@ -74,14 +104,9 @@ void draw_sprite(int sprite_num, int col, int row)
     lcd.write(sprite_num);
 }
 
-void draw_player()
+void draw_entity(Entity *entity)
 {
-    draw_sprite(player.sprite, player.col, player.row);
-}
-
-void draw_enemy()
-{
-    draw_sprite(ENEMY_SPRITE, enemy_pos, 1);
+    draw_sprite(entity->sprite, entity->col, entity->row);
 }
 
 void draw_points()
@@ -99,62 +124,111 @@ void draw_points()
     lcd.print(points);
 }
 
-void update_player()
+int jump_entity(Entity *entity, Jump_State on_stop, Sprite up, Sprite down)
 {
-    switch (player.jump_state) {
-
-        case RISING: {
-            if (player.sprite == PLAYER_SPRITE_DOWN) {
-                player.sprite = PLAYER_SPRITE_UP;
+    switch (entity->jump_state) {
+        case RISE: {
+            if (entity->sprite == down) {
+                entity->sprite = up;
             } else { /* sprite up */
-                if (player.row == ROW_TOP) {
-                    player.jump_state = FALLING;
+                if (entity->row == ROW_TOP) {
+                    entity->jump_state = FALL;
                 } else {
-                    player.row = ROW_TOP;
+                    entity->row = ROW_TOP;
                 }
-
-                player.sprite = PLAYER_SPRITE_DOWN;
+                entity->sprite = down;
             }
         } break;
 
-        case FALLING: {
-            if (player.sprite == PLAYER_SPRITE_DOWN) {
-                if (player.row == ROW_DOWN) {
-                    player.jump_state = NOT_JUMPING;
+        case FALL: {
+            if (entity->sprite == down) {
+                if (entity->row == ROW_DOWN) {
+                    entity->jump_state = STOP;
                 } else { /* row top */
-                    player.row = ROW_DOWN;
-                    player.sprite = PLAYER_SPRITE_UP;
+                    entity->row = ROW_DOWN;
+                    entity->sprite = up;
                 }
             } else {
-                player.sprite = PLAYER_SPRITE_DOWN;
+                entity->sprite = down;
             }
         } break;
 
-        case NOT_JUMPING: {
-            /* do nothing for now */
+        case STOP: {
+            entity->jump_state = on_stop;
+        } break;
+
+        default: {
+            lcderror("invalid jmp");
+            return 1;
         } break;
     }
+
+    return 0;
+}
+
+int update_player()
+{
+    return jump_entity(&player, STOP, PLAYER_SPRITE_UP, PLAYER_SPRITE_DOWN);
+}
+
+void random_enemy()
+{
+    int chaos = random(5);
+
+    switch (chaos) {
+        case 0: {
+            enemy.jump_state = RISE;
+            enemy.type = JUMPING_ENEMY;
+            enemy.sprite = BASIC_ENEMY_SPRITE_DOWN;
+            enemy.row = ROW_DOWN;
+        } break;
+
+        case 1: {
+            enemy.jump_state = FALL;
+            enemy.type = JUMPING_ENEMY;
+            enemy.sprite = BASIC_ENEMY_SPRITE_UP;
+            enemy.row = ROW_TOP;
+        } break;
+
+        default: {
+            enemy.jump_state = STOP;
+            enemy.type = BASIC_ENEMY;
+            enemy.sprite = BASIC_ENEMY_SPRITE_DOWN;
+            enemy.row = ROW_DOWN;
+        } break;
+    }
+
+    enemy.col = 15;
 }
 
 int enemy_is_updatable = 1;
-void update_enemy()
+int update_enemy()
 {
-    if (enemy_is_updatable) {
-        enemy_pos -= 1;
-        if (enemy_pos < 0) {
-            enemy_pos = 15;
-        }
+    if (!enemy_is_updatable) {
+        enemy_is_updatable = !enemy_is_updatable;
+        return 0;
+    }
+
+    enemy.col -= 1;
+    if (enemy.col < 0) {
+        random_enemy();
+    }
+
+    int result;
+    if (enemy.type == JUMPING_ENEMY) {
+       result = jump_entity(&enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
     }
 
     enemy_is_updatable = !enemy_is_updatable;
+    return result;
 }
 
 int ms_count = 0;
 void update_points()
 {
-    if (enemy_pos == player.col &&
-        player.row == ROW_DOWN  &&
-        player.sprite == PLAYER_SPRITE_DOWN)
+    if (enemy.col == player.col &&
+        enemy.row == player.row)
+        // player.sprite == PLAYER_SPRITE_DOWN)
     {
         loose = 1;
         ms_count = 0;
@@ -171,13 +245,21 @@ void update_points()
 void init_game()
 {
     player = {
-        .jump_state = NOT_JUMPING,
+        .jump_state = STOP,
+        .type = PLAYER,
+        .sprite = PLAYER_SPRITE_DOWN,
         .col = 1,
         .row = 1,
-        .sprite = 1
     };
 
-    enemy_pos = 15;
+    enemy = {
+        .jump_state = STOP,
+        .type = BASIC_ENEMY,
+        .sprite = BASIC_ENEMY_SPRITE_DOWN,
+        .col = 15,
+        .row = 1
+    };
+
     loose = 0;
     points = 0;
     enemy_is_updatable = 1;
@@ -187,20 +269,30 @@ void setup()
 {
     lcd.begin(16, 2);
 
-    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);
-    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);
-    lcd.createChar(ENEMY_SPRITE, enemy_sprite);
+    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);  //  8
+    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);    // 16
+    lcd.createChar(BASIC_ENEMY_SPRITE_DOWN, enemy_sprite);  // 24
+    lcd.createChar(BASIC_ENEMY_SPRITE_UP, enemy_sprite_up); // 32
+                                                            // 48
+                                                            // 56
+                                                            // 64 - thats the limit!
+
 
     pinMode(JUMP_BUTTON, INPUT);
 
+    randomSeed(analogRead(0));
+
     init_game();
-    // Serial.begin(9600); // debug
+    Serial.begin(9600); // debug
 }
 
 void loop()
 {
-    lcd.clear();
+    if (!running) {
+        return;
+    }
 
+    lcd.clear();
     if (loose) {
         lcd.setCursor(0, 0);
         lcd.print("Game Over!");
@@ -218,20 +310,26 @@ void loop()
         return;
     }
 
-    if (player.jump_state == NOT_JUMPING) {
+    if (player.jump_state == STOP) {
         jump = digitalRead(JUMP_BUTTON);
         if (jump) {
-            player.jump_state = RISING;
+            player.jump_state = RISE;
         }
     }
 
-    draw_enemy();
-    draw_player();
+    draw_entity(&enemy);
+    draw_entity(&player);
     draw_points();
 
     update_points();
-    update_enemy();
-    update_player();
+
+    if (update_enemy() != 0) {
+        return;
+    }
+
+    if (update_player() != 0) {
+        return;
+    }
 
     delay(DELAY_MS);
 }
