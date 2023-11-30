@@ -151,7 +151,7 @@ void init_game()
             .sprite = BASIC_ENEMY_SPRITE_DOWN,
             .col = 15 + (i*8),
             .row = 1,
-            .updatable = TRUE
+            .updatable = FALSE
         };
     }
 
@@ -273,7 +273,7 @@ void randomize_enemy(Entity *enemy)
             enemy->jump_state = FALL;
             enemy->type = JUMPING_ENEMY;
             enemy->sprite = BASIC_ENEMY_SPRITE_UP;
-            enemy->row = ROW_TOP;
+            enemy->row = ROW_DOWN;
         } break;
 
         case 2: {
@@ -287,7 +287,7 @@ void randomize_enemy(Entity *enemy)
             enemy->jump_state = FALL;
             enemy->type = FLYING_ENEMY;
             enemy->sprite = FLYING_ENEMY_SPRITE_UP;
-            enemy->row = ROW_TOP;
+            enemy->row = ROW_DOWN;
         } break;
 
         default: {
@@ -301,10 +301,26 @@ void randomize_enemy(Entity *enemy)
 
 int update_enemy(Entity *enemy)
 {
+    enemy->updatable = !enemy->updatable;
+
     // its more smoothly if we update enemys 1/2 times in comparison to player
     if (!enemy->updatable) {
-        enemy->updatable = !enemy->updatable;
         return 0;
+    }
+
+    int jmp_result;
+    switch (enemy->type) {
+        case JUMPING_ENEMY: {
+           jmp_result = jump_entity(enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
+        } break;
+
+        case FLYING_ENEMY: {
+           jmp_result = jump_entity(enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
+        } break;
+
+        default: {
+            jmp_result = 0;
+        } break;
     }
 
     enemy->col -= 1;
@@ -313,15 +329,7 @@ int update_enemy(Entity *enemy)
         randomize_enemy(enemy);
     }
 
-    int result;
-    if (enemy->type == JUMPING_ENEMY) {
-       result = jump_entity(enemy, RISE, BASIC_ENEMY_SPRITE_UP, BASIC_ENEMY_SPRITE_DOWN);
-    } else if (enemy->type == FLYING_ENEMY) {
-       result = jump_entity(enemy, RISE, FLYING_ENEMY_SPRITE_UP, FLYING_ENEMY_SPRITE_DOWN);
-    }
-
-    enemy->updatable = !enemy->updatable;
-    return result;
+    return jmp_result;
 }
 
 int update_enemys()
@@ -365,13 +373,11 @@ void setup()
     lcd.createChar(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
     lcd.createChar(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
-
     pinMode(JUMP_BUTTON, INPUT);
 
     randomSeed(analogRead(0));
 
     init_game();
-    Serial.begin(9600); // debug
 }
 
 void loop()
