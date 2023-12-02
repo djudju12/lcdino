@@ -12,6 +12,7 @@
 #define DELAY_MS 50
 
 #define ENEMY_COUNT 2
+
 #define TRUE  7
 #define FALSE 0
 
@@ -35,7 +36,6 @@ enum Sprite {
     FLYING_ENEMY_SPRITE_DOWN,
     FLYING_ENEMY_SPRITE_UP,
     LOGO_UNISC_SPRITE
-
 };
 
 struct Entity {
@@ -75,7 +75,7 @@ void lcd_write(int sprite_num, int col, int row)
 
 void lcd_print(char *s, int col, int row)
 {
-    lcd_set_cursor(col, 0);
+    lcd_set_cursor(col, row);
     lcd.print(s);
 }
 
@@ -171,7 +171,7 @@ void init_game()
         .type = PLAYER,
         .sprite = PLAYER_SPRITE_DOWN,
         .col = 1,
-        .row = 1,
+        .row = ROW_DOWN,
         .updatable = TRUE
     };
 
@@ -181,7 +181,7 @@ void init_game()
             .type = BASIC_ENEMY,
             .sprite = BASIC_ENEMY_SPRITE_DOWN,
             .col = 15 + (i*8),
-            .row = 1,
+            .row = ROW_DOWN,
             .updatable = FALSE
         };
     }
@@ -194,7 +194,7 @@ void init_game()
 void lcderror(char *s)
 {
     clear();
-    lcd_print("err:", 0, 0);
+    lcd_print("err:", 0, ROW_DOWN);
     lcd_print(s, 0, ROW_DOWN);
     running = 0;
 }
@@ -231,12 +231,12 @@ void draw_points()
     }
 
     itoa(points, str_points, 10);
-    lcd_print(str_points, col, 0);
+    lcd_print(str_points, col, ROW_TOP);
 }
 
 void draw_unisc()
 {
-    lcd_write(LOGO_UNISC_SPRITE, 15, 1);
+    lcd_write(LOGO_UNISC_SPRITE, 15, ROW_TOP);
 }
 
 int jump_entity(Entity *entity, Jump_State on_stop, Sprite up, Sprite down)
@@ -393,9 +393,7 @@ void update_points()
 void setup()
 {
     lcd_begin();
-    lcd_print("hello", 0, 0);
-    return
-    //
+
     lcd_load_char(PLAYER_SPRITE_DOWN, player_sprites[0]);            //  8
     lcd_load_char(PLAYER_SPRITE_UP, player_sprites[1]);              // 16
     lcd_load_char(BASIC_ENEMY_SPRITE_DOWN, basic_enemy_sprites[0]);  // 24
@@ -413,16 +411,15 @@ void setup()
 
 void loop()
 {
-    return;
     if (!running) {
         return;
     }
 
     clear();
     if (loose) {
-        lcd_print("Game Over!", 0, 0);
+        lcd_print("Game Over!", 0, ROW_TOP);
 
-        lcd_print("Press <jump>", 0, 1);
+        lcd_print("Press <jump>", 0, ROW_DOWN);
 
         draw_points();
         draw_unisc();
