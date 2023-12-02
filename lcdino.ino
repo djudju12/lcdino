@@ -9,14 +9,14 @@
 
 #define JUMP_BUTTON 10
 
-#define ROW_TOP  0
-#define ROW_DOWN 1
-
 #define DELAY_MS 50
 
 #define ENEMY_COUNT 2
 #define TRUE  7
 #define FALSE 0
+
+#define ROW_TOP  0
+#define ROW_DOWN 1
 
 enum Jump_State { FALL, RISE, STOP };
 
@@ -45,8 +45,41 @@ struct Entity {
     int col, row, updatable;
 };
 
-#define LEN_PLAYER 2
-byte player_sprites[LEN_PLAYER][8] = {
+LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
+
+void clear()
+{
+    lcd.clear();
+}
+
+void lcd_set_cursor(int col, int row)
+{
+    lcd.setCursor(col, row);
+}
+
+void lcd_load_char(int sprite_num, byte data[8])
+{
+    lcd.createChar(sprite_num, data);
+}
+
+void lcd_begin()
+{
+    lcd.begin(16, 2);
+}
+
+void lcd_write(int sprite_num, int col, int row)
+{
+    lcd_set_cursor(col, row);
+    lcd.write(sprite_num);
+}
+
+void lcd_print(char *s, int col, int row)
+{
+    lcd_set_cursor(col, 0);
+    lcd.print(s);
+}
+
+byte player_sprites[2][8] = {
     {
         B00000,
         B00000,
@@ -126,8 +159,6 @@ byte logo_unisc_sprite[8] = {
     B11111
 };
 
-LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
-
 Entity player;
 Entity enemys[ENEMY_COUNT];
 
@@ -162,18 +193,16 @@ void init_game()
 
 void lcderror(char *s)
 {
-    lcd.clear();
-    lcd.print("err:");
-    lcd.setCursor(0, ROW_DOWN);
-    lcd.print(s);
+    clear();
+    lcd_print("err:", 0, 0);
+    lcd_print(s, 0, ROW_DOWN);
     running = 0;
 }
 
 void draw_sprite(int sprite_num, int col, int row)
 {
     if (col <= 15) {
-        lcd.setCursor(col, row);
-        lcd.write(sprite_num);
+        lcd_write(sprite_num, col, row);
     }
 }
 
@@ -189,6 +218,7 @@ void draw_enemys()
     }
 }
 
+char str_points[4];
 void draw_points()
 {
     int col;
@@ -200,14 +230,13 @@ void draw_points()
         col = 13;
     }
 
-    lcd.setCursor(col, 0);
-    lcd.print(points);
+    itoa(points, str_points, 10);
+    lcd_print(str_points, col, 0);
 }
 
 void draw_unisc()
 {
-    lcd.setCursor(15, 1);
-    lcd.write(LOGO_UNISC_SPRITE);
+    lcd_write(LOGO_UNISC_SPRITE, 15, 1);
 }
 
 int jump_entity(Entity *entity, Jump_State on_stop, Sprite up, Sprite down)
@@ -363,15 +392,17 @@ void update_points()
 
 void setup()
 {
-    lcd.begin(16, 2);
-
-    lcd.createChar(PLAYER_SPRITE_DOWN, player_sprites[0]);            //  8
-    lcd.createChar(PLAYER_SPRITE_UP, player_sprites[1]);              // 16
-    lcd.createChar(BASIC_ENEMY_SPRITE_DOWN, basic_enemy_sprites[0]);  // 24
-    lcd.createChar(BASIC_ENEMY_SPRITE_UP, basic_enemy_sprites[1]);    // 32
-    lcd.createChar(FLYING_ENEMY_SPRITE_DOWN, flying_enemy_sprites[0]);// 48
-    lcd.createChar(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
-    lcd.createChar(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
+    lcd_begin();
+    lcd_print("hello", 0, 0);
+    return
+    //
+    lcd_load_char(PLAYER_SPRITE_DOWN, player_sprites[0]);            //  8
+    lcd_load_char(PLAYER_SPRITE_UP, player_sprites[1]);              // 16
+    lcd_load_char(BASIC_ENEMY_SPRITE_DOWN, basic_enemy_sprites[0]);  // 24
+    lcd_load_char(BASIC_ENEMY_SPRITE_UP, basic_enemy_sprites[1]);    // 32
+    lcd_load_char(FLYING_ENEMY_SPRITE_DOWN, flying_enemy_sprites[0]);// 48
+    lcd_load_char(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
+    lcd_load_char(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
     pinMode(JUMP_BUTTON, INPUT);
 
@@ -382,17 +413,16 @@ void setup()
 
 void loop()
 {
+    return;
     if (!running) {
         return;
     }
 
-    lcd.clear();
+    clear();
     if (loose) {
-        lcd.setCursor(0, 0);
-        lcd.print("Game Over!");
+        lcd_print("Game Over!", 0, 0);
 
-        lcd.setCursor(0, 1);
-        lcd.print("Press <jump>");
+        lcd_print("Press <jump>", 0, 1);
 
         draw_points();
         draw_unisc();
