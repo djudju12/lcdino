@@ -220,7 +220,7 @@ char str_points[4];
 void draw_points()
 {
     int col;
-    if (points < 10) {w
+    if (points < 10) {
         col = 15;
     } else if (points < 100) {
         col = 14;
@@ -400,7 +400,7 @@ void setup()
     lcd_load_char(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
     lcd_load_char(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
-    pinMode(JP  INPUT);
+    pinMode(JP, INPUT);
 
     randomSeed(analogRead(0));
 
@@ -422,7 +422,7 @@ void loop()
         draw_points();
         draw_unisc();
 
-        while (!digitalRead(JP ) {
+        while (!digitalRead(JP)) {
             delay(100);
         }
 
@@ -431,7 +431,7 @@ void loop()
     }
 
     if (player.jump_state == STOP) {
-        jump = digitalRead(JP ;
+        jump = digitalRead(JP);
         if (jump) {
             player.jump_state = RISE;
         }
