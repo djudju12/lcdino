@@ -1,20 +1,18 @@
 #include <LiquidCrystal.h>
 
-#define RS 8
-#define EN 9
-#define D4 4
-#define D5 5
-#define D6 6
-#define D7 7
-
-#define JUMP_BUTTON 10
-
-#define DELAY_MS 50
-
-#define ENEMY_COUNT 2
-
 #define TRUE  7
 #define FALSE 0
+
+#define RS  8
+#define EN  9
+#define D4  4
+#define D5  5
+#define D6  6
+#define D7  7
+#define JP 10
+
+#define DELAY_MS 50
+#define ENEMY_COUNT 2
 
 #define ROW_TOP  0
 #define ROW_DOWN 1
@@ -222,7 +220,7 @@ char str_points[4];
 void draw_points()
 {
     int col;
-    if (points < 10) {
+    if (points < 10) {w
         col = 15;
     } else if (points < 100) {
         col = 14;
@@ -402,7 +400,7 @@ void setup()
     lcd_load_char(FLYING_ENEMY_SPRITE_UP, flying_enemy_sprites[1]);  // 56
     lcd_load_char(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
-    pinMode(JUMP_BUTTON, INPUT);
+    pinMode(JP  INPUT);
 
     randomSeed(analogRead(0));
 
@@ -424,7 +422,7 @@ void loop()
         draw_points();
         draw_unisc();
 
-        while (!digitalRead(JUMP_BUTTON)) {
+        while (!digitalRead(JP ) {
             delay(100);
         }
 
@@ -433,7 +431,7 @@ void loop()
     }
 
     if (player.jump_state == STOP) {
-        jump = digitalRead(JUMP_BUTTON);
+        jump = digitalRead(JP ;
         if (jump) {
             player.jump_state = RISE;
         }
