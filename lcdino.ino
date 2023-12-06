@@ -3,16 +3,16 @@
 #define TRUE  7
 #define FALSE 0
 
-#define RS  8
-#define EN  9
-#define D4  4
-#define D5  5
-#define D6  6
-#define D7  7
+#define RS  9
+#define EN  8
+#define D4  7
+#define D5  6
+#define D6  5
+#define D7  4
 #define JP 10
 
-#define DELAY_MS 50
-#define ENEMY_COUNT 2
+#define DELAY_MS    75
+#define ENEMY_COUNT  2
 
 #define ROW_TOP  0
 #define ROW_DOWN 1
@@ -160,7 +160,7 @@ byte logo_unisc_sprite[8] = {
 Entity player;
 Entity enemys[ENEMY_COUNT];
 
-int jump, loose, points, running;
+int jump, loose, points, running, buzzing;
 
 void init_game()
 {
@@ -187,6 +187,7 @@ void init_game()
     loose = 0;
     points = 0;
     running = 1;
+    buzzing = 0;
 }
 
 void lcderror(char *s)
@@ -234,7 +235,7 @@ void draw_points()
 
 void draw_unisc()
 {
-    lcd_write(LOGO_UNISC_SPRITE, 15, ROW_TOP);
+    lcd_write(LOGO_UNISC_SPRITE, 15, ROW_DOWN);
 }
 
 int jump_entity(Entity *entity, Jump_State on_stop, Sprite up, Sprite down)
@@ -382,11 +383,13 @@ void update_points()
     }
 
     ms_count += DELAY_MS;
-    if (ms_count == 1000) {
+    if (ms_count >= 1000) {
         points++;
         ms_count = 0;
     }
 }
+
+const int buzzer = 2;
 
 void setup()
 {
@@ -401,7 +404,7 @@ void setup()
     lcd_load_char(LOGO_UNISC_SPRITE, logo_unisc_sprite);             // 64 - thats the limit!
 
     pinMode(JP, INPUT);
-
+    pinMode(buzzer, OUTPUT);
     randomSeed(analogRead(0));
 
     init_game();
@@ -412,15 +415,26 @@ void loop()
     if (!running) {
         return;
     }
-
+    
+    digitalWrite(buzzer, LOW);
     clear();
     if (loose) {
         lcd_print("Game Over!", 0, ROW_TOP);
-
         lcd_print("Press <jump>", 0, ROW_DOWN);
 
         draw_points();
         draw_unisc();
+
+        if (!buzzing){
+          buzzing = 1;
+          tone(buzzer, 1500, 200);
+          delay(200);
+          tone(buzzer, 1300, 200);
+          delay(200);
+          tone(buzzer, 1200, 200);
+          delay(200);
+          tone(buzzer, 1000, 300);
+        }
 
         while (!digitalRead(JP)) {
             delay(100);
@@ -433,6 +447,7 @@ void loop()
     if (player.jump_state == STOP) {
         jump = digitalRead(JP);
         if (jump) {
+            tone(buzzer, 1500, 50);
             player.jump_state = RISE;
         }
     }
